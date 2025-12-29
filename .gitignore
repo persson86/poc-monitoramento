@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+
+# Vídeos e mídia
+video/*.mp4
+video/*.mov
