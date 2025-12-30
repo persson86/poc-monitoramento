@@ -1,0 +1,213 @@
+{
+  "snapshot_id": "e0070296-ab67-481f-9daf-e69d9697f6d1",
+  "created_at": 1767050027.349653,
+  "time_window": {
+    "start": 1767047661.622404,
+    "end": 1767049479.924693,
+    "duration_seconds": 1818.3022890090942
+  },
+  "events_summary": {
+    "atomic_events": [
+      {
+        "id": "c7c41fcf-4236-4abd-8e2b-fa19714d641a",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767047661.622404,
+        "confidence": 0.0
+      },
+      {
+        "id": "2eb08a0c-19c7-41fa-a98b-c0f88235025d",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767047675.6989188,
+        "confidence": 0.0
+      },
+      {
+        "id": "97dfab8c-9064-4377-9039-ec589a69566c",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767047678.293997,
+        "confidence": 0.0
+      },
+      {
+        "id": "e91f50b0-9960-43f3-a105-c1a85f585158",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767047692.239394,
+        "confidence": 0.0
+      },
+      {
+        "id": "18af817a-9adb-4686-ba27-10a7d11d487d",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767047694.306543,
+        "confidence": 0.0
+      },
+      {
+        "id": "f758d734-3c06-4f11-a731-456374bf11e1",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767048043.801053,
+        "confidence": 0.0
+      },
+      {
+        "id": "e8adaf04-13ed-4a5c-a49a-ed049cee6a45",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767048052.300908,
+        "confidence": 0.0
+      },
+      {
+        "id": "2b42abd3-6e7e-41d9-8d71-2628cb58aff1",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767048072.082152,
+        "confidence": 0.0
+      },
+      {
+        "id": "f9835d16-996d-48d9-b615-8b2da31e8a08",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767048074.615833,
+        "confidence": 0.0
+      },
+      {
+        "id": "3af9bfa3-5c94-4b1c-b97e-2cb92ff1b275",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767048082.5901299,
+        "confidence": 0.0
+      },
+      {
+        "id": "44075b7f-d644-46c4-834d-1b22fe51f0f6",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767049026.0739672,
+        "confidence": 0.0
+      },
+      {
+        "id": "a5ff08d6-e3af-4bb8-85a5-af907194eb8d",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767049032.9191282,
+        "confidence": 0.0
+      },
+      {
+        "id": "df7a452c-8b83-477f-b452-9adfa119e324",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767049037.5524008,
+        "confidence": 0.0
+      },
+      {
+        "id": "6339934b-1a3f-427a-9418-e198608f503c",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767049039.6892369,
+        "confidence": 0.0
+      },
+      {
+        "id": "3fbbfc3d-a564-4be5-a15a-841ea6928e26",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767049046.2265458,
+        "confidence": 0.0
+      },
+      {
+        "id": "35b7c6b7-1b61-4f53-bc7b-59fa5988f07d",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767049051.827174,
+        "confidence": 0.0
+      },
+      {
+        "id": "c687ede5-a927-4765-80fc-0d6e76069006",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767049464.181628,
+        "confidence": 0.0
+      },
+      {
+        "id": "9b8c22bb-3af2-4370-8ac1-365ebeb3d115",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767049473.419842,
+        "confidence": 0.0
+      },
+      {
+        "id": "847451fa-e0e7-4fad-9088-ef861c7d0a4c",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767049476.254436,
+        "confidence": 0.0
+      },
+      {
+        "id": "4c9dba45-26d9-4c8b-8022-e33827e65357",
+        "type": "RAPID_VERTICAL_MOVEMENT",
+        "timestamp": 1767049479.9240708,
+        "confidence": 0.0
+      }
+    ],
+    "composite_events": [
+      {
+        "id": "cbc28299-f31e-4e82-a3eb-0cf076d24e51",
+        "type": "POTENTIAL_FALL",
+        "timestamp": 1767047678.294683,
+        "confidence": 0.85
+      },
+      {
+        "id": "e048b0fc-9198-4030-920f-2a2485ac54b1",
+        "type": "POTENTIAL_FALL",
+        "timestamp": 1767047694.307095,
+        "confidence": 0.85
+      },
+      {
+        "id": "eb2ab651-b460-4854-8817-8d45602706ad",
+        "type": "POTENTIAL_FALL",
+        "timestamp": 1767048043.801931,
+        "confidence": 0.85
+      },
+      {
+        "id": "087b48f2-0a15-4ea8-974d-4261c0588220",
+        "type": "POTENTIAL_FALL",
+        "timestamp": 1767048074.616344,
+        "confidence": 0.85
+      },
+      {
+        "id": "1b1ac335-f81c-42b5-bddd-13fca027a214",
+        "type": "POTENTIAL_FALL",
+        "timestamp": 1767049026.074791,
+        "confidence": 0.85
+      },
+      {
+        "id": "8f1ff317-81ca-4237-ae02-4e41675da162",
+        "type": "POTENTIAL_FALL",
+        "timestamp": 1767049037.553013,
+        "confidence": 0.85
+      },
+      {
+        "id": "dbc6f304-6627-4fc3-9b22-07fbaf5681a7",
+        "type": "POTENTIAL_FALL",
+        "timestamp": 1767049051.82761,
+        "confidence": 0.85
+      },
+      {
+        "id": "882153f5-1240-4303-96ca-fd006a97a5b3",
+        "type": "POTENTIAL_FALL",
+        "timestamp": 1767049464.1822379,
+        "confidence": 0.85
+      },
+      {
+        "id": "7103a656-9061-48dc-b004-98078ae14630",
+        "type": "POTENTIAL_FALL",
+        "timestamp": 1767049476.2550159,
+        "confidence": 0.85
+      },
+      {
+        "id": "20993d4f-85e0-47e7-a4a0-ccc55f08e576",
+        "type": "POTENTIAL_FALL",
+        "timestamp": 1767049479.924693,
+        "confidence": 0.85
+      }
+    ]
+  },
+  "inferred_state": {
+    "occupant_state": "ON_FLOOR",
+    "confidence": 0.85
+  },
+  "hypotheses": [
+    {
+      "type": "POSSIBLE_FALL",
+      "confidence": 0.85,
+      "reasoning": "Multiple rapid vertical movements detected followed by potential fall event."
+    }
+  ],
+  "metrics": {
+    "max_dy": 1.121,
+    "avg_dy": 0.365,
+    "event_count": 30
+  },
+  "human_readable_summary": "Between 19:34:21 and 20:04:39, 30 events were detected. Rapid vertical movements were observed. This pattern is consistent with a possible fall. The occupant state is inferred as ON_FLOOR.",
+  "version": "2.0 (Snapshots)"
+}

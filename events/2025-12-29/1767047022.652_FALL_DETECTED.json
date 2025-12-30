@@ -1,0 +1,22 @@
+{
+  "id": "56a6927d-f4db-44a3-af10-f1e52e713391",
+  "type": "FALL_DETECTED",
+  "timestamp": 1767047022.652117,
+  "source": "vision.test_fall_detector",
+  "severity": "medium",
+  "payload": {
+    "method": "pose+motion",
+    "center_y_velocity": 0.2456483542919159,
+    "threshold_metrics": {
+      "dy": 0.2456483542919159,
+      "motion_threshold": 0.18,
+      "dt": 0.339447021484375
+    }
+  },
+  "context": {
+    "camera": "webcam",
+    "frame_id": 979,
+    "video_resolution": "1920x1080"
+  },
+  "version": "1.0"
+}

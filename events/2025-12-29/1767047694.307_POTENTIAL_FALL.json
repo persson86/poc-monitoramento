@@ -1,0 +1,34 @@
+{
+  "id": "e048b0fc-9198-4030-920f-2a2485ac54b1",
+  "event_type": "POTENTIAL_FALL",
+  "event_category": "composite",
+  "timestamp": 1767047694.307095,
+  "source": {
+    "engine": "vision",
+    "module": "test_fall_detector",
+    "input_type": "webcam",
+    "camera_id": "webcam"
+  },
+  "signals": {
+    "motion": {
+      "vertical_displacement": 0.2717519998550415,
+      "velocity_y": 3.949255753359158,
+      "direction": "down"
+    },
+    "posture": {
+      "hip_center_y": 1.7107393741607666,
+      "keypoints_count": 33
+    }
+  },
+  "temporal_context": {
+    "frame_id": 722,
+    "time_since_last_event": 2.0671498775482178
+  },
+  "derived_hypotheses": [
+    "fall_detected",
+    "occupant_on_floor"
+  ],
+  "severity_hint": "high",
+  "confidence_hint": 0.85,
+  "version": "1.1"
+}
