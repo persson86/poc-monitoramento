@@ -1,0 +1,35 @@
+{
+  "id": "86efadb7-9b61-4025-bd91-9f3ffc2df8dd",
+  "event_type": "RAPID_VERTICAL_MOVEMENT",
+  "event_category": "motion",
+  "timestamp": 1767096416.048376,
+  "source": {
+    "engine": "vision",
+    "module": "test_fall_detector",
+    "input_type": "webcam",
+    "camera_id": "webcam"
+  },
+  "signals": {
+    "motion": {
+      "vertical_displacement": 0.36798151582479477,
+      "velocity_y": 2.7740557133716406,
+      "direction": "down"
+    },
+    "posture": {
+      "hip_center_y": 0.6153613924980164,
+      "keypoints_count": 33
+    }
+  },
+  "temporal_context": {
+    "frame_id": 153,
+    "time_since_last_event": 3.3682098388671875
+  },
+  "derived_hypotheses": [
+    "rapid_descent",
+    "potential_instability"
+  ],
+  "event_chain": [],
+  "severity_hint": "medium",
+  "confidence_hint": 0.0,
+  "version": "1.2"
+}

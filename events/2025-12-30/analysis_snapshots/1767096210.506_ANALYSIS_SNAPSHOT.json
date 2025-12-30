@@ -1,0 +1,75 @@
+{
+  "snapshot_id": "7fe8fc59-142a-4e74-88ca-9b808036f095",
+  "snapshot_version": "1.2",
+  "time_window": {
+    "start": "2025-12-30T09:03:00.506269",
+    "end": "2025-12-30T09:03:30.506269",
+    "duration_seconds": 30.0
+  },
+  "event_summary": {
+    "total_events": 30,
+    "event_types_count": {
+      "RAPID_VERTICAL_MOVEMENT": 22,
+      "POTENTIAL_FALL": 8
+    }
+  },
+  "temporal_pattern": {
+    "pattern_type": "instability",
+    "description": "Sequence of movements culminating in a potential fall detection."
+  },
+  "observed_state": {
+    "posture": "low_height",
+    "movement_trend": "unstable",
+    "confidence": 0.85
+  },
+  "hypotheses": [
+    {
+      "type": "possible_fall",
+      "supporting_events": [
+        "eb2ab651-b460-4854-8817-8d45602706ad",
+        "087b48f2-0a15-4ea8-974d-4261c0588220",
+        "1b1ac335-f81c-42b5-bddd-13fca027a214",
+        "8f1ff317-81ca-4237-ae02-4e41675da162",
+        "dbc6f304-6627-4fc3-9b22-07fbaf5681a7",
+        "882153f5-1240-4303-96ca-fd006a97a5b3",
+        "7103a656-9061-48dc-b004-98078ae14630",
+        "20993d4f-85e0-47e7-a4a0-ccc55f08e576"
+      ],
+      "confidence": 0.85
+    }
+  ],
+  "human_readable_summary": "Observed 30 events. Detected a potential fall scenario. The subject appears to be at low height/on floor.",
+  "raw_event_ids": [
+    "f758d734-3c06-4f11-a731-456374bf11e1",
+    "eb2ab651-b460-4854-8817-8d45602706ad",
+    "e8adaf04-13ed-4a5c-a49a-ed049cee6a45",
+    "2b42abd3-6e7e-41d9-8d71-2628cb58aff1",
+    "f9835d16-996d-48d9-b615-8b2da31e8a08",
+    "087b48f2-0a15-4ea8-974d-4261c0588220",
+    "3af9bfa3-5c94-4b1c-b97e-2cb92ff1b275",
+    "44075b7f-d644-46c4-834d-1b22fe51f0f6",
+    "1b1ac335-f81c-42b5-bddd-13fca027a214",
+    "a5ff08d6-e3af-4bb8-85a5-af907194eb8d",
+    "df7a452c-8b83-477f-b452-9adfa119e324",
+    "8f1ff317-81ca-4237-ae02-4e41675da162",
+    "6339934b-1a3f-427a-9418-e198608f503c",
+    "3fbbfc3d-a564-4be5-a15a-841ea6928e26",
+    "35b7c6b7-1b61-4f53-bc7b-59fa5988f07d",
+    "dbc6f304-6627-4fc3-9b22-07fbaf5681a7",
+    "c687ede5-a927-4765-80fc-0d6e76069006",
+    "882153f5-1240-4303-96ca-fd006a97a5b3",
+    "9b8c22bb-3af2-4370-8ac1-365ebeb3d115",
+    "847451fa-e0e7-4fad-9088-ef861c7d0a4c",
+    "7103a656-9061-48dc-b004-98078ae14630",
+    "4c9dba45-26d9-4c8b-8022-e33827e65357",
+    "20993d4f-85e0-47e7-a4a0-ccc55f08e576",
+    "c402fbd2-7a69-43b0-a424-0f8052fe6d1e",
+    "97998a2c-3ad8-42e7-96aa-dcbdb03780d3",
+    "f339a641-8a1c-4cc8-9d47-4b2ecf3af071",
+    "f7f9c9bc-13eb-4158-b604-7864cd28d1ae",
+    "180b285b-94c7-4b78-b8e7-f306c158b919",
+    "54b84a61-d301-4efa-b652-f88403011c76",
+    "bd2f2a9d-0367-4a62-aaa9-3b9d74277b77"
+  ],
+  "generated_at": "2025-12-30T09:03:30.506269"
+}

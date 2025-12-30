@@ -14,7 +14,7 @@ EVENTS_DIR = "events"
 
 class AnalysisSnapshotBuilder:
     """
-    Builder for creating rich, human-readable Analysis Snapshots from a sequence of events.
+    Builder for creating rich, human-readable Analysis Snapshots (v1.2) from a sequence of events.
     """
 
     def __init__(self):
@@ -26,142 +26,166 @@ class AnalysisSnapshotBuilder:
         except OSError as e:
             logger.error(f"Failed to create directory {path}: {e}")
 
-    def build_snapshot(self, events: List[Dict[str, Any]], window_seconds: float = None) -> Dict[str, Any]:
+    def _iso_format(self, timestamp: float) -> str:
+        return datetime.datetime.fromtimestamp(timestamp).isoformat()
+
+    def build_snapshot(self, events: List[Dict[str, Any]], window_seconds: float = 30.0) -> Dict[str, Any]:
         """
-        Builds a full Analysis Snapshot (v2) from a list of events.
+        Builds a full Analysis Snapshot (v1.2) from a list of events.
         """
-        current_time = time.time()
+        current_time_ts = time.time()
         
         # Sort events
         sorted_events = sorted(events, key=lambda x: x.get("timestamp", 0))
         
-        start_time = current_time
-        end_time = current_time
+        # Determine strict window based on input or events
+        end_time_ts = current_time_ts
+        start_time_ts = end_time_ts - window_seconds
         
-        if sorted_events:
-            start_time = sorted_events[0].get("timestamp", 0)
-            end_time = sorted_events[-1].get("timestamp", 0)
+        # Only consider events within the window? 
+        # The prompt says "Ler todos os eventos JSON dentro da janela".
+        # Assuming the caller might filter, but we should double check or just process what's given.
+        # Ideally we process what is passed.
         
-        if window_seconds and not sorted_events:
-             start_time = end_time - window_seconds
-        
-        duration = end_time - start_time
-        if duration < 0: duration = 0
-
-        # --- Metrics Calculation ---
+        # Metrics Calculation
+        total_events = len(sorted_events)
+        event_types_count = {}
         atomic_events = []
         composite_events = []
-        vertical_displacements = []
+        raw_event_ids = []
         
         for evt in sorted_events:
+            etype = evt.get("event_type", "unknown")
+            event_types_count[etype] = event_types_count.get(etype, 0) + 1
+            raw_event_ids.append(evt.get("id"))
+            
             if evt.get("event_category") == "composite":
                 composite_events.append(evt)
             else:
                 atomic_events.append(evt)
-            
-            # Extract dy
-            signals = evt.get("signals", {})
-            if "motion" in signals:
-                dy = signals["motion"].get("vertical_displacement", 0)
-                if dy > 0:
-                    vertical_displacements.append(dy)
 
-        max_dy = max(vertical_displacements) if vertical_displacements else 0.0
-        avg_dy = sum(vertical_displacements) / len(vertical_displacements) if vertical_displacements else 0.0
-
-        # --- Inference Logic ---
-        occupant_state = "UNKNOWN"
-        state_confidence = 0.5
-        hypotheses = []
-
-        # Heuristics
+        # Inference Logic (Heuristics)
+        # 1. Posture & Movement Trend
+        posture = "unknown"
+        movement_trend = "unknown"
+        confidence = 0.0
+        
         has_fall_event = any(e.get("event_type") == "POTENTIAL_FALL" for e in composite_events)
         has_rapid_movement = any(e.get("event_type") == "RAPID_VERTICAL_MOVEMENT" for e in atomic_events)
         
         if has_fall_event:
-            occupant_state = "ON_FLOOR"
-            state_confidence = 0.85
+            posture = "low_height"
+            movement_trend = "unstable"
+            confidence = 0.85
+        elif has_rapid_movement:
+            posture = "moving"
+            movement_trend = "unstable" # suggestive
+            confidence = 0.6
+        elif total_events > 0:
+            posture = "standing" # Default assumption if active events exist but no fall
+            movement_trend = "stable"
+            confidence = 0.4
+        else:
+            posture = "unknown"
+            movement_trend = "unknown"
+            confidence = 1.0 # Confident that we know nothing? Or 0? Let's say 1.0 that nothing happened.
+
+        # 2. Temporal Pattern
+        pattern_type = "ambiguous"
+        pattern_desc = "No significant pattern observed."
+        
+        if total_events == 0:
+            pattern_type = "quiet"
+            pattern_desc = "No events detected in the time window."
+        elif has_fall_event:
+            pattern_type = "instability"
+            pattern_desc = "Sequence of movements culminating in a potential fall detection."
+        elif event_types_count.get("RAPID_VERTICAL_MOVEMENT", 0) > 2:
+            pattern_type = "repeated_instability"
+            pattern_desc = "Multiple rapid vertical movements detected without confirmed fall."
+        elif total_events == 1:
+             pattern_type = "isolated_event"
+             pattern_desc = "Single isolated event detected."
+
+        # 3. Hypotheses
+        hypotheses = []
+        if has_fall_event:
             hypotheses.append({
-                "type": "POSSIBLE_FALL",
-                "confidence": 0.85,
-                "reasoning": "Multiple rapid vertical movements detected followed by potential fall event."
+                "type": "possible_fall",
+                "supporting_events": [e.get("id") for e in composite_events if e.get("event_type") == "POTENTIAL_FALL"],
+                "confidence": 0.85
             })
         elif has_rapid_movement:
-            occupant_state = "MOVING" # or UNSTABLE
-            state_confidence = 0.7
-            hypotheses.append({
-                "type": "NEEDS_ATTENTION",
-                "confidence": 0.6,
-                "reasoning": "Rapid vertical movements detected without confirmed fall."
+             hypotheses.append({
+                "type": "instability",
+                "supporting_events": [e.get("id") for e in atomic_events if e.get("event_type") == "RAPID_VERTICAL_MOVEMENT"],
+                "confidence": 0.6
             })
-        elif sorted_events:
-            occupant_state = "STANDING" # Default assumption if active events exist but no fall
-            state_confidence = 0.5
         else:
-            occupant_state = "UNKNOWN"
-            state_confidence = 0.0
+             hypotheses.append({
+                "type": "normal_activity",
+                "supporting_events": [],
+                "confidence": 0.5
+            })
 
-        # --- Human Readable Summary ---
-        start_str = datetime.datetime.fromtimestamp(start_time).strftime('%H:%M:%S')
-        end_str = datetime.datetime.fromtimestamp(end_time).strftime('%H:%M:%S')
-        
+        # 4. Human Readable Summary
         summary_parts = []
-        summary_parts.append(f"Between {start_str} and {end_str}, {len(sorted_events)} events were detected.")
-        if has_rapid_movement:
-            summary_parts.append("Rapid vertical movements were observed.")
-        if has_fall_event:
-            summary_parts.append("This pattern is consistent with a possible fall.")
-            summary_parts.append("The occupant state is inferred as ON_FLOOR.")
-        elif sorted_events:
-            summary_parts.append("No critical patterns were identified.")
+        if total_events == 0:
+            summary_parts.append("No activity detected in the last window.")
+        else:
+            summary_parts.append(f"Observed {total_events} events.")
+            if has_fall_event:
+                summary_parts.append("Detected a potential fall scenario.")
+                summary_parts.append("The subject appears to be at low height/on floor.")
+            elif has_rapid_movement:
+                summary_parts.append("Detected multiple rapid movements, suggesting instability.")
+                summary_parts.append("Subject is likely moving but upright.")
+            else:
+                 summary_parts.append("Minor activity detected, currently stable.")
         
         human_readable_summary = " ".join(summary_parts)
 
-        # --- Construct JSON ---
+        # Construct JSON v1.2
         snapshot = {
             "snapshot_id": str(uuid.uuid4()),
-            "created_at": current_time,
+            "snapshot_version": "1.2",
             "time_window": {
-                "start": start_time,
-                "end": end_time,
-                "duration_seconds": duration
+                "start": self._iso_format(start_time_ts),
+                "end": self._iso_format(end_time_ts),
+                "duration_seconds": window_seconds
             },
-            "events_summary": {
-                "atomic_events": [self._summarize_event(e) for e in atomic_events],
-                "composite_events": [self._summarize_event(e) for e in composite_events]
+            "event_summary": {
+                "total_events": total_events,
+                "event_types_count": event_types_count
             },
-            "inferred_state": {
-                "occupant_state": occupant_state,
-                "confidence": state_confidence
+            "temporal_pattern": {
+                "pattern_type": pattern_type,
+                "description": pattern_desc
+            },
+            "observed_state": {
+                "posture": posture,
+                "movement_trend": movement_trend,
+                "confidence": float(f"{confidence:.2f}")
             },
             "hypotheses": hypotheses,
-            "metrics": {
-                "max_dy": float(f"{max_dy:.3f}"),
-                "avg_dy": float(f"{avg_dy:.3f}"),
-                "event_count": len(sorted_events)
-            },
             "human_readable_summary": human_readable_summary,
-            "version": "2.0 (Snapshots)"
+            "raw_event_ids": raw_event_ids,
+            "generated_at": self._iso_format(current_time_ts)
         }
         
         return snapshot
-
-    def _summarize_event(self, evt: Dict) -> Dict:
-        """Brief summary for embedding."""
-        return {
-            "id": evt.get("id"),
-            "type": evt.get("event_type"),
-            "timestamp": evt.get("timestamp"),
-            "confidence": evt.get("confidence_hint")
-        }
 
     def save_snapshot(self, snapshot: Dict[str, Any]) -> str:
         """
         Saves to events/YYYY-MM-DD/analysis_snapshots/<timestamp>_ANALYSIS_SNAPSHOT.json
         """
         try:
-            ts = snapshot["created_at"]
-            date_str = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
+            # Parse generated_at back to timestamp for filename, or just use current time
+            # Using timestamp from generated_at is safer
+            gen_at = snapshot["generated_at"]
+            dt = datetime.datetime.fromisoformat(gen_at)
+            ts = dt.timestamp()
+            date_str = dt.strftime('%Y-%m-%d')
             
             # Construct path: events/YYYY-MM-DD/analysis_snapshots/
             base_dir = os.path.join(EVENTS_DIR, date_str, "analysis_snapshots")
