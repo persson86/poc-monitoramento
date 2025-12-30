@@ -84,14 +84,6 @@ Modo atual: observe. Modelo testado: gpt-5-mini.
 
 ⸻
 
-🔐 Configuração de Ambiente
-
-Variáveis esperadas via .env (não versionado):
-LLM_ENABLED, LLM_MODE, LLM_MODEL, OPENAI_API_KEY.
-O arquivo .env não deve ser commitado e já está no .gitignore.
-
-⸻
-
 ▶️ Execução de Testes
 
 Detector + Webcam: python3 src/test_fall_detector.py
