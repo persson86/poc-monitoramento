@@ -9,6 +9,7 @@ logger = logging.getLogger("DecisionEngine")
 if not logger.handlers:
     logging.basicConfig(level=logging.INFO)
 
+
 class DecisionEngine:
     """
     Deterministic Decision Engine that consumes Analysis Snapshots

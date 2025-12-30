@@ -8,3 +8,6 @@ __pycache__/
 # Vídeos e mídia
 video/*.mp4
 video/*.mov
+
+# Config
+.env
