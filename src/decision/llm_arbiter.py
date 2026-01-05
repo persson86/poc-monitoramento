@@ -5,6 +5,7 @@ from typing import Dict, Any, Optional
 from pathlib import Path
 from decision.openai_provider import RealOpenAIProvider
 from decision.mock_provider import MockLLMProvider
+from shared.logging_contracts import emit_log
 
 # Module-level load (standard), tests can override via patch.dict or load_dotenv(override=True)
 try:
@@ -71,7 +72,7 @@ class LLMDecisionArbiter:
         )
         logger.info(log_msg)
 
-    def arbitrate(self, snapshot: Dict[str, Any], preliminary_decision: Dict[str, Any]) -> Dict[str, Any]:
+    def arbitrate(self, snapshot: Dict[str, Any], preliminary_decision: Dict[str, Any], force_observe: bool = False) -> Dict[str, Any]:
         """
         Reviews a preliminary decision.
         """
@@ -86,8 +87,40 @@ class LLMDecisionArbiter:
             "arbiter_status": "skipped"
         }
 
-        # Only arbitrate ambiguous cases
-        if original_decision != "REQUEST_CONFIRMATION":
+        # Add check for prolonged floor time to force observe mode
+        on_floor_duration = snapshot.get("on_floor_duration_seconds", 0.0)
+        patterns = snapshot.get("detected_patterns", [])
+        should_force_observe = False
+        
+        # Force observe if:
+        # 1. Explicitly requested by caller (force_observe=True)
+        # 2. Duration > 5s (generic validation)
+        # 3. Decision is NOTIFY_FAMILY_INFO (internal safety check)
+        # 4. Pattern 'prolonged_floor_immobility' is present
+        if (force_observe or
+            on_floor_duration > 5.0 or 
+            original_decision == "NOTIFY_FAMILY_INFO" or 
+            "prolonged_floor_immobility" in patterns):
+            
+            logger.info(f"Forced observe mode triggered. Forced={force_observe}, Duration: {on_floor_duration}s, Decision: {original_decision}")
+            should_force_observe = True
+            # Proceed with LLM call, but then force the 'observe' path
+            self.mode = "observe" # Temporarily override mode for this arbitration
+
+        # Only arbitrate ambiguous cases UNLESS we are forcing observe for duration/critical events
+        if original_decision != "REQUEST_CONFIRMATION" and not should_force_observe:
+            # Emit LLM_SKIPPED log to make explicit why LLM was not called
+            skip_reason = f"Decision '{original_decision}' does not require confirmation and no force triggers (duration={on_floor_duration:.1f}s)"
+            emit_log(
+                log_type="LLM_SKIPPED",
+                payload={
+                    "reason": skip_reason,
+                    "original_decision": original_decision,
+                    "on_floor_duration_seconds": on_floor_duration
+                },
+                trace_id=snapshot.get("snapshot_id", "unknown"),
+                component="llm_arbiter"
+            )
             return fallback_result
 
         # Generation logic
@@ -96,6 +129,28 @@ class LLMDecisionArbiter:
         
         try:
             prompt = self._construct_prompt(snapshot)
+            
+            # Emit LLM_INPUT log before API call
+            snapshot_id = snapshot.get("snapshot_id", "unknown")
+            risk_level = snapshot.get("risk_level", "unknown")
+            world_state = snapshot.get("world_state", "unknown")
+            patterns = snapshot.get("detected_patterns", [])
+            event_count = len(snapshot.get("supporting_events", []))
+            
+            payload_summary = f"risk={risk_level}, state={world_state}, patterns={len(patterns)}, events={event_count}"
+            
+            emit_log(
+                log_type="LLM_INPUT",
+                payload={
+                    "model": self.model_name,
+                    "mode": self.mode,
+                    "snapshot_id": snapshot_id,
+                    "payload_summary": payload_summary,
+                    "system_question": "Analyze snapshot and provide safety recommendation"
+                },
+                trace_id=snapshot_id,
+                component="llm_arbiter"
+            )
             
             # Call Provider
             if self.provider:
@@ -112,10 +167,38 @@ class LLMDecisionArbiter:
             if not generated_text:
                 # If real provider returned None (e.g. SDK error logged inside provider), we stop.
                 logger.error("Provider returned no content.")
+                
+                # Emit LLM_OUTPUT log for error case
+                emit_log(
+                    log_type="LLM_OUTPUT",
+                    payload={
+                        "recommended_action": None,
+                        "risk_level": None,
+                        "confidence": None,
+                        "flags": ["provider_error", "no_response"],
+                        "notes": "Provider failed to generate content"
+                    },
+                    trace_id=snapshot_id,
+                    component="llm_arbiter"
+                )
                 return fallback_result
 
         except Exception as e:
             logger.error(f"LLM Arbitration Failed: {e}")
+            
+            # Emit LLM_OUTPUT log for exception case
+            emit_log(
+                log_type="LLM_OUTPUT",
+                payload={
+                    "recommended_action": None,
+                    "risk_level": None,
+                    "confidence": None,
+                    "flags": ["exception", "api_failure"],
+                    "notes": f"Exception during LLM call: {str(e)}"
+                },
+                trace_id=snapshot.get("snapshot_id", "unknown"),
+                component="llm_arbiter"
+            )
             return fallback_result
 
         # Parse and Return
@@ -123,7 +206,40 @@ class LLMDecisionArbiter:
         
         if not parsed_decision:
             logger.warning("Failed to parse LLM response.")
+            
+            # Emit LLM_OUTPUT log for parse failure
+            emit_log(
+                log_type="LLM_OUTPUT",
+                payload={
+                    "recommended_action": None,
+                    "risk_level": None,
+                    "confidence": None,
+                    "flags": ["parse_error"],
+                    "notes": "Failed to parse LLM response as valid JSON"
+                },
+                trace_id=snapshot_id,
+                component="llm_arbiter"
+            )
             return fallback_result
+        
+        # Emit LLM_OUTPUT log for successful response
+        emit_log(
+            log_type="LLM_OUTPUT",
+            payload={
+                "recommended_action": parsed_decision.get("recommendation"),
+                "risk_level": parsed_decision.get("risk_level"),
+                "confidence": parsed_decision.get("confidence"),
+                "flags": parsed_decision.get("uncertainty_flags", []),
+                "notes": parsed_decision.get("notes", "")
+            },
+            trace_id=snapshot_id,
+            component="llm_arbiter"
+        )
+
+        # Unconditional Message Preview Generation
+        # Requirement: Always generate preview if LLM was called, derived exclusively from LLM output.
+        self._emit_message_preview(snapshot_id, parsed_decision)
+        fallback_result["message_preview_generated"] = True
 
         # Observe vs Enforce
         if self.mode == "observe":
@@ -141,8 +257,50 @@ class LLMDecisionArbiter:
             "risk_level": parsed_decision.get("risk_level", "unknown"),
             "uncertainty_flags": parsed_decision.get("uncertainty_flags", []),
             "arbiter_version": self.version,
-            "arbiter_status": "enforced"
+            "arbiter_status": "enforced",
+            "message_preview_generated": True
         }
+
+    def _emit_message_preview(self, snapshot_id: str, parsed_decision: Dict[str, Any]):
+        rec = parsed_decision.get("recommendation", "IGNORE")
+        risk = parsed_decision.get("risk_level", "unknown")
+        conf = parsed_decision.get("confidence", 0.0)
+        notes = parsed_decision.get("notes", "No notes provided")
+        
+        # Simple Portuguese formatting
+        title_map = {
+            "NOTIFY_CAREGIVER": "🚨 ALERTA DE QUEDA",
+            "REQUEST_CONFIRMATION": "⚠️ CONFIRMAÇÃO NECESSÁRIA",
+            "MONITOR": "ℹ️ MONITORAMENTO",
+            "NOTIFY_FAMILY_INFO": "ℹ️ AVISO FAMILIAR - Queda Detectada (Tempo)",
+            "IGNORE": "👻 SISTEMA SILENCIOSO (IGNORE)" 
+        }
+        title = title_map.get(rec, "MENSAGEM DO SISTEMA")
+        
+        # Custom body formatting based on message type
+        if rec == "NOTIFY_FAMILY_INFO":
+            body = (
+                "Olá. O sistema detectou que a pessoa monitorada permaneceu no chão por um tempo prolongado.\n"
+                "A situação parece estável e não foi identificada como emergência crítica, "
+                "mas recomendamos verificar o ambiente quando possível.\n\n"
+                f"Observação da IA: {notes}"
+            )
+        else:
+            body = f"Análise AI: Risco {risk.upper()} ({conf:.2f}).\nObs: {notes}"
+        
+        emit_log(
+            log_type="MESSAGE_PREVIEW",
+            payload={
+                "source": "LLM",
+                "channel": "TELEGRAM",
+                "recipient": "Caregiver",
+                "title": title,
+                "body": body,
+                "requires_ack": (rec == "REQUEST_CONFIRMATION")
+            },
+            trace_id=snapshot_id,
+            component="llm_arbiter"
+        )
 
     def _construct_prompt(self, snapshot: Dict[str, Any]) -> str:
         snapshot_json = json.dumps(snapshot, indent=2)
@@ -173,7 +331,7 @@ You MUST return ONLY valid JSON, with no text before or after, using EXACTLY
 the following schema:
 
 {{
-  "recommendation": "NOTIFY_CAREGIVER | REQUEST_CONFIRMATION | MONITOR | IGNORE",
+  "recommendation": "NOTIFY_CAREGIVER | REQUEST_CONFIRMATION | MONITOR | IGNORE | NOTIFY_FAMILY_INFO",
   "risk_level": "low | medium | high | critical",
   "confidence": 0.0,
   "reasoning": "short, clear explanation grounded in the snapshot",
@@ -191,7 +349,7 @@ Here is the Analysis Snapshot to analyze:
             clean_text = response_text.replace("```json", "").replace("```", "").strip()
             data = json.loads(clean_text)
             
-            valid = ["NOTIFY_CAREGIVER", "MONITOR", "REQUEST_CONFIRMATION", "IGNORE"]
+            valid = ["NOTIFY_CAREGIVER", "MONITOR", "REQUEST_CONFIRMATION", "IGNORE", "NOTIFY_FAMILY_INFO"]
             if data.get("recommendation") not in valid:
                 logger.error(f"Invalid recommendation: {data.get('recommendation')}")
                 return None

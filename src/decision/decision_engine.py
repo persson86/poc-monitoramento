@@ -4,6 +4,7 @@ import json
 import logging
 import datetime
 from typing import Dict, Any, List
+from shared.logging_contracts import emit_log
 
 logger = logging.getLogger("DecisionEngine")
 if not logger.handlers:
@@ -51,6 +52,7 @@ class DecisionEngine:
         risk_level = "low"
         recommended_next_step = "none"
         reasoning_parts = []
+        rules_triggered = []
         
         # Baseline logic v0.2
         # Calculate time in low posture if applicable
@@ -89,12 +91,14 @@ class DecisionEngine:
         
         # Rule 1: Fall + Low Posture + Long Duration (Critical)
         if fall_hypothesis and posture in ["low_height", "on_floor"]:
+             rules_triggered.append("Fall + Low Posture")
              # If we are strictly conservative:
              if window_duration >= 10 and not recovery_detected:
                  decision = "NOTIFY_CAREGIVER"
                  risk_level = "critical"
                  recommended_next_step = "notify"
                  reasoning_parts.append("Confirmed fall with persistent low posture (>10s estimate).")
+                 rules_triggered.append("Long Duration (>10s)")
              else:
                  # Short duration or uncertainty
                  decision = "REQUEST_CONFIRMATION"
@@ -104,6 +108,7 @@ class DecisionEngine:
         
         # Rule 2: Fall with Recovery
         elif fall_hypothesis and recovery_detected:
+             rules_triggered.append("Fall with Recovery")
              decision = "MONITOR"
              risk_level = "medium"
              recommended_next_step = "wait"
@@ -111,6 +116,7 @@ class DecisionEngine:
              
         # Rule 3: Instability (No Fall)
         elif pattern_type in ["instability", "repeated_instability"]:
+            rules_triggered.append("Instability Pattern")
             decision = "MONITOR"
             risk_level = "medium"
             recommended_next_step = "wait"
@@ -118,12 +124,42 @@ class DecisionEngine:
             
         # Rule 4: Normal/Ignore
         else:
+             rules_triggered.append("Normal/Baseline")
              if total_events > 0:
                   reasoning_parts.append(f"Observed {total_events} events, no critical pattern.")
                   decision = "IGNORE"
              else:
                   reasoning_parts.append("No significant events.")
                   decision = "IGNORE"
+
+        # Add logic to check ON_FLOOR duration and escalate decision.
+        is_fall_detected = fall_hypothesis is not None and fall_hypothesis.get("type", "").lower() == "fall"
+        is_potential_fall = fall_hypothesis is not None and fall_hypothesis.get("type", "").lower() == "possible_fall"
+
+        if is_fall_detected or is_potential_fall:
+            # Check for prolonged floor time detected by Analysis Engine
+        # User Requirement: Treat as informational family notification (non-emergency)
+            if "prolonged_floor_immobility" in snapshot.get("detected_patterns", []) or float(snapshot.get("on_floor_duration_seconds", 0.0)) > 25.0:
+                 decision = "NOTIFY_FAMILY_INFO"
+                 risk_level = "high" # Downgraded from critical per requirement
+                 rules_triggered.append("confirmed_fall_by_duration")
+                 reasoning_parts.append(f"Person on floor > 25s - Triggering family information update")
+                 recommended_next_step = "notify_family"
+            
+            elif float(snapshot.get("on_floor_duration_seconds", 0.0)) > 15.0:
+                # Fallback for generic long duration without specific event
+                 decision = "NOTIFY_CAREGIVER"
+                 risk_level = "critical"
+                 rules_triggered.append(f"prolonged_immobility_detected")
+                 reasoning_parts.append(f"Person on floor > 15s - Immediate notification recommended")
+                 recommended_next_step = "notify"
+                 
+            elif is_fall_detected:
+                 rules_triggered.append("potential_fall_monitoring")
+                 decision = "MONITOR"
+                 risk_level = "medium"
+                 reasoning_parts.append("Potential fall detected, monitoring for recovery or escalation.")
+                 recommended_next_step = "wait"
 
         # Final Safeguard
         if not decision:
@@ -141,5 +177,19 @@ class DecisionEngine:
             "decision_version": "0.2",
             "generated_at": self._iso_format(current_time_ts)
         }
+        
+        # Emit DECISION_ENGINE log
+        emit_log(
+            log_type="DECISION_ENGINE",
+            payload={
+                "snapshot_id": snapshot_id,
+                "final_decision": decision,
+                "rules_triggered": rules_triggered,
+                "risk_assessment": risk_level,
+                "notes": " ".join(reasoning_parts)
+            },
+            trace_id=snapshot_id,
+            component="decision_engine"
+        )
         
         return result

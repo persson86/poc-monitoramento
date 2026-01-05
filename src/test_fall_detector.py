@@ -1,10 +1,12 @@
 import cv2
 import time
 import argparse
+import uuid
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import event_engine
+from shared.logging_contracts import emit_log
 
 # =========================
 # Argumentos
@@ -98,16 +100,47 @@ while True:
             dy = center_y - prev_center_y # Positive dy means moving DOWN (y increases downwards)
             dt = now - prev_time
 
-            # Detection Logic
-            if (
+            # Calculate velocity for both triggered and discarded events
+            velocity_y = dy / dt if dt > 0 else 0
+            
+            # Generate unique event ID for this evaluation
+            atomic_event_id = str(uuid.uuid4())
+            
+            # Calculate confidence based on signal strength
+            # Higher dy and faster movement = higher confidence
+            confidence = min(abs(dy) / (motion_threshold * 2), 1.0)
+            
+            # Evaluate thresholds
+            threshold_passed = (
                 dy > motion_threshold  # Significant downward movement
                 and dt < 0.6          # Fast movement
                 and (now - last_event_time) > cooldown_seconds
-            ):
+            )
+            
+            # Determine decision
+            decision = "TRIGGERED" if threshold_passed else "DISCARDED"
+            
+            # ALWAYS emit structured log for atomic event evaluation
+            emit_log(
+                log_type="ATOMIC_EVENT",
+                payload={
+                    "event_id": atomic_event_id,
+                    "event_type": "RAPID_VERTICAL_MOVEMENT",
+                    "source_signal": "vertical_motion",
+                    "raw_value": float(dy),
+                    "normalized_value": float(velocity_y),
+                    "threshold": motion_threshold,
+                    "confidence": float(confidence),
+                    "decision": decision
+                },
+                trace_id=atomic_event_id,
+                component="atomic_event_detector"
+            )
+
+            # Process TRIGGERED events
+            if threshold_passed:
                 # 1. Emit Observable Fact: RAPID_VERTICAL_MOVEMENT
                 # This is a pure physical observation.
-                velocity_y = dy / dt if dt > 0 else 0
-                
                 signals = {
                     "motion": {
                         "vertical_displacement": float(dy),
@@ -148,7 +181,7 @@ while True:
                 # 2. Derive Composite Event: POTENTIAL_FALL
                 # If the movement is very strong, we suggest a fall.
                 if dy > (motion_threshold * 1.5):
-                     event_engine.emit_event(
+                     composite_event = event_engine.emit_event(
                         event_type="POTENTIAL_FALL",
                         event_category=event_engine.CATEGORY_COMPOSITE,
                         signals=signals, # Share same signals
@@ -164,6 +197,24 @@ while True:
                         confidence_hint=0.85 # Example heuristic
                     )
                      print("⚠️ EVENTO COMPOSTO: POTENTIAL_FALL (Linked to Atomic Events)")
+                     
+                     # Emit COMPOSITE_EVENT log (OPEN state)
+                     time_window = temporal_ctx.get("time_since_last_event", 0.0)
+                     emit_log(
+                         log_type="COMPOSITE_EVENT",
+                         payload={
+                             "composite_event_id": composite_event["id"],
+                             "composite_type": "POTENTIAL_FALL",
+                             "triggering_events": recent_atomic_ids,
+                             "time_window_seconds": float(time_window),
+                             "confidence": composite_event.get("confidence_hint", 0.85),
+                             "state": "OPEN",
+                             "reasoning_summary": "Composite event triggered by rapid vertical movement exceeding threshold"
+                         },
+                         trace_id=composite_event["id"],
+                         component="composite_event_detector"
+                     )
+
 
                 last_event_time = now
 

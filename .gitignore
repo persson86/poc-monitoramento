@@ -1,13 +1,16 @@
-# macOS
-.DS_Store
-
 # Python
+.venv/
 __pycache__/
 *.pyc
 
-# Vídeos e mídia
-video/*.mp4
-video/*.mov
+# MacOS
+.DS_Store
 
-# Config
+# Runtime artifacts
+logs/
+events/
+
+# Local env
 .env
+
+video/

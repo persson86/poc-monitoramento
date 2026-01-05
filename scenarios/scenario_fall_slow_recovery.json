@@ -1,0 +1,31 @@
+{
+    "scenario_id": "fall_slow_recovery",
+    "description": "Pessoa cai lentamente, permanece no chão ~30s e se levanta sozinha",
+    "version": "1.0",
+    "time_unit": "seconds",
+    "initial_state": {
+        "observed_state": "STANDING"
+    },
+    "timeline": [
+        {
+            "t": 0.0,
+            "type": "STATE",
+            "observed_state": "STANDING"
+        },
+        {
+            "t": 1.5,
+            "type": "STATE",
+            "observed_state": "ON_FLOOR"
+        },
+        {
+            "t": 30.0,
+            "type": "STATE",
+            "observed_state": "ON_FLOOR"
+        },
+        {
+            "t": 35.0,
+            "type": "STATE",
+            "observed_state": "STANDING"
+        }
+    ]
+}

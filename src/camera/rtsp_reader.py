@@ -46,8 +46,13 @@ class RTSPReader:
         while self.running and not self._stop_event.is_set():
             try:
                 if cap is None or not cap.isOpened():
-                    logger.info(f"Opening source: {self.rtsp_url}")
-                    cap = cv2.VideoCapture(self.rtsp_url)
+                    source = self.rtsp_url
+                    # Support webcam index passed as string
+                    if isinstance(source, str) and source.isdigit():
+                         source = int(source)
+                         
+                    logger.info(f"Opening source: {source}")
+                    cap = cv2.VideoCapture(source)
                     
                     if not cap.isOpened():
                         msg = "Failed to open source."
